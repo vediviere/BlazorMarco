@@ -1,0 +1,59 @@
+﻿@inject HttpClient http
+
+<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <EditForm Model="NuevaMeta" OnValidSubmit="ModalOk">
+            <DataAnnotationsValidator />
+                <div class="modal-header" style="background-color:#258077">
+                    <h4 class="modal-title" style="color:white">Desea agregar una nueva meta?</h4>
+                    <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control" placeholder="Meta" @bind-value="NuevaMeta.NombreMeta">
+                    <ValidationMessage For="@(()=> NuevaMeta.NombreMeta)" />
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-outline-success">Guardar</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    Meta NuevaMeta = new Meta();
+
+    protected override void OnParametersSet()
+    {
+        NuevaMeta.Fecha = DateTime.Now;
+    }
+
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private async void ModalOk()
+    {
+        await GuardarMeta();
+
+        await OnClose.InvokeAsync(true);
+    }
+
+    private async Task GuardarMeta()
+    {
+        var re = await http.PostAsJsonAsync("metas", NuevaMeta);
+        var result = re.Content.ReadFromJsonAsync<int>();
+        if (result.Result > 0)
+        {
+            //await js.Alert("Sucursal registrada correctamente");
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+}

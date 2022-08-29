@@ -1,0 +1,100 @@
+﻿@inject HttpClient http
+
+<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <EditForm Model="NuevaTarea" OnValidSubmit="ModalOk">
+                <DataAnnotationsValidator />
+                <div class="modal-header" style="background-color:#258077">
+                    <h4 class="modal-title" style="color:white">Desea agregar una tarea?</h4>
+                    <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control" placeholder="Tarea" @bind-value="NuevaTarea.NombreTarea">
+                    <ValidationMessage For="@(()=> NuevaTarea.NombreTarea)" />
+                    @if (TareaExiste)
+                    {
+                        <p class="text-danger">El nombre ya existe</p>
+                    }
+                    else
+                    {
+                    <p class="text-danger"></p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-outline-success">Guardar</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [Parameter]
+    public Meta MetaActual { get; set; }
+
+    [Parameter]
+    public List<Tarea> ListaTareas { get; set; }
+
+    Tarea NuevaTarea = new Tarea();
+    bool TareaExiste = false;
+
+
+    protected override void OnParametersSet()
+    {
+        NuevaTarea.Fecha = DateTime.Now;
+        NuevaTarea.MetaId = MetaActual.MetaId;
+    }
+
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private async void ModalOk()
+    {
+        if(!ValidarNombre())
+        {
+            await GuardarTarea();
+            await OnClose.InvokeAsync(true);
+        }
+        else
+        {
+            //mandar mensaje  
+            TareaExiste = true;
+        }
+    }
+
+    private async Task GuardarTarea()
+    {
+        NuevaTarea.MetaId = MetaActual.MetaId;
+        NuevaTarea.Fecha = DateTime.Now;
+
+        try
+        {
+            var re = await http.PostAsJsonAsync("tareas", NuevaTarea);
+            var result = re.Content.ReadFromJsonAsync<int>();
+            if (result.Result > 0)
+            {
+                //await js.Alert("Sucursal registrada correctamente");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private bool ValidarNombre()
+    {
+        return ListaTareas.Where(t => t.NombreTarea == NuevaTarea.NombreTarea && t.MetaId == NuevaTarea.MetaId).Count() >= 1;
+    }
+
+
+
+}

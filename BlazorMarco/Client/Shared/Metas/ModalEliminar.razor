@@ -1,0 +1,31 @@
+﻿@inject HttpClient http
+
+<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#C10037">
+                <h4 class="modal-title" style="color:white">Desea eliminar esta meta?</h4>
+                <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" @onclick="@ModalOk">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private Task ModalOk()
+    {
+       return OnClose.InvokeAsync(true);
+    }
+
+}

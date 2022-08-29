@@ -1,0 +1,623 @@
+﻿@page "/"
+@inject HttpClient http
+
+<content>
+    <div class="row">
+        <div class="col-sm-12 col-md-12 col-lg-12">
+            <div class="card border-primary mb-3">
+                <div class="card-body">
+                    Control de metas
+                </div>
+            </div>
+        </div>
+    </div>
+    @*<br />*@
+
+    <div class="row">
+        <div class="col-sm-4">
+            <div class="card border-primary">
+                <div class="card-header">
+                    <button class="btn btn-primary btn-sm" @onclick="() => OpenAddDialog()">
+                        <span class="oi oi-plus"></span>  Nueva Meta
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        @if (ListaMetas != null)
+                        {
+                            foreach (var meta in ListaMetas)
+                            {
+                                <a href="#" class="list-group-item list-group-item-action" aria-current="true" @onclick="@(() => ListarTareas(meta))">
+                                    <div class="row">
+                                        <div class="col-sm-8 col-md-8 col-lg-8">
+                                            <p><strong>@meta.NombreMeta</strong></p>
+                                        </div>
+                                        <div class="col-sm-2 col-md-2 col-lg-2">
+                                            <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#staticBackdrop" 
+                                                    @onclick="() => OpenEditDialog(meta)">
+                                                <span class="oi oi-pencil"></span>
+                                            </button>
+                                        </div>
+                                        <div class="col-sm-2 col-md-2 col-lg-2">
+                                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#staticBackdrop" 
+                                                    @onclick="() => OpenDeleteDialog(meta.MetaId)">
+                                                <span class="oi oi-trash"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <small>  Fecha Creada: @meta.Fecha.ToShortDateString()</small>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-10 col col-md-10 col-lg-10">
+                                            <small>Tareas completadas: @meta.TareasTerminadas() / @meta.TotalTareas()</small>
+                                        </div>
+                                        <div class="col-sm-2 col-md-2 col-lg-2">
+                                            <div class="row">
+                                                <small>@meta.PorcentajeTareasTerminadas()% </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar"
+                                     style="width: @meta.PorcentajeTareasTerminadas()%"
+                                     aria-valuenow="@meta.PorcentajeTareasTerminadas()"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </a>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+            <div class="card border-primary mb-3 ">
+                <div class="card-header">
+                    @MetaActual.NombreMeta
+                </div>
+                <div class="card-body">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="row" style="margin-top:5px; text-align:center;">
+                                <div class="col-sm-3">
+                                    <button type="button" class="btn btn-primary btn-sm" @attributes="SetAttributes()" @onclick="() => OpenAddDialogTareas()">
+                                        <span class="oi oi-plus"></span>  Agregar tarea
+                                    </button>
+                                </div>
+                                <div class="col-sm-3">
+                                    @if (@TotalSeleccionados >= 1)
+                                    {
+                                        <button type="button" class="btn btn-success btn-sm"  @onclick="() => CompletarTarea()">
+                                            <span class="oi oi-circle-check"></span>
+                                            Completar tarea
+                                        </button>
+                                    }
+                                </div>
+                                <div class="col-sm-3">
+                                    @if (@TotalSeleccionados == 1)
+                                    {
+                                        <button class="btn btn-info btn-sm" @onclick="() => OpenEditDialogTarea()">
+                                            <span class="oi oi-pencil"></span>
+                                            Editar tarea
+                                        </button>
+                                    }
+                                </div>
+                                <div class="col-sm-3">
+                                    @if (@TotalSeleccionados == 1)
+                                    {
+                                        <button class="btn btn-danger btn-sm"  @onclick="() => OpenDeleteDialogTarea()">
+                                            <span class="oi oi-trash"></span>
+                                            Eliminar tarea
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" style="text-align:center;">
+                                <div class="col-sm-1">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label><b>Tarea</b></label>
+                                </div>
+                                <div class="col-sm-3">
+                                    <label><b>Fecha</b></label>
+                                </div>
+                                <div class="col-sm-2">
+                                    <label><b>Estado</b></label>
+                                </div>
+                            </div>
+                            <div class="row" style="text-align:center;">
+                                <div class="col-sm-1">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" @attributes="SetAttributes()" 
+                                        @onchange="(e) => OnChangeEvent(e)" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <input  type="text" class="form-control" placeholder="Tarea" 
+                                       value = "@TextoFiltrar"                                           
+                                           @onchange="(e) => OnChangedTex(e)" />
+
+                                </div>
+                                <div class="col-sm-3">
+                                    <input type="date" class="form-control" @attributes="SetAttributes()" placeholder="Fecha"
+                                           value="@FechaFiltrar.ToString("yyyy-MM-dd")"
+                                           @onchange="(e) => OnChangedFecha(DateTime.Parse(e.Value.ToString()))" />
+                                    @*<input type="date" value="@knowledge.ActualShortTermDate.ToString("yyyy-MM-dd")" 
+                                    @onchange="@(async (e) => await updateDate(DateTime.Parse(e.Value.ToString())))" />*@
+                                </div>
+                                <div class="col-sm-2">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" @attributes="SetAttributes()" id="customSwitch1">
+                                        <label class="custom-control-label" for="customSwitch1">Estado</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <table class="table table-hover">
+                                <thead>
+                                </thead>
+                                <tbody>
+                                    @if (ListaTareas != null)
+                                    {
+                                        foreach (var tarea in ListaTareas)
+                                        {                                           
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox"
+                                                       checked=@(@tarea.Seleccionado)
+                                                       class="form-check-input"
+                                                       @onchange = "() => OnChangeEventMarcado(new ChangeEventArgs{ Value = tarea})"
+                                                    />
+                                                </td>
+
+                                                <td>
+                                                    @if (tarea.Importante)
+                                                    {
+                                                        <button @onclick="() =>  OnClicEventImportante(new ChangeEventArgs { Value = new Tarea { TareaId = tarea.TareaId, Importante = false } })">
+                                                            <span class="oi oi-star"></span>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button @onclick="() => OnClicEventImportante(new  ChangeEventArgs { Value = new Tarea { TareaId = tarea.TareaId, Importante = true } })">
+                                                            <span class="oi oi-aperture"></span>
+                                                        </button>
+                                                    }
+                                                    @*<input class="form-check-input" type="checkbox" value="">*@
+                                                </td>
+                                                <td>
+                                                    @tarea.NombreTarea
+                                                </td>
+                                                <td>
+                                                    <label>@tarea.Fecha.ToShortDateString()</label>
+                                                </td>
+                                                <td>
+                                                    @if(tarea.Estatus)
+                                                    {
+                                                        <p class="text-success"><strong>Completado</strong></p>
+                                                    }
+                                                    else
+                                                    {
+                                                        <p>Abierto</p>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                                <tfoo>
+
+                                </tfoo>
+                            </table>
+                            @* <br />
+                            <hr />*@
+
+
+                        </div>
+                        <div class="card-footer">
+                            <TareasPaginacion PaginasTotales="paginasTotales" PaginaActual="paginaActual" PaginaSeleccionada="PaginaSeleccionada" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</content>
+
+
+@*Seccion modales Metas*@
+@if (EditDialogOpen)
+{
+    <ModalEditar MetaModificar="MetaModificar" OnClose="@OnEditDialogClose"></ModalEditar>
+}
+@if (DeleteDialogOpen)
+{
+    <ModalEliminar OnClose="@OnDeleteDialogClose"></ModalEliminar>
+}
+
+@if (AddDialogOpen)
+{
+    <ModalAgregarMeta OnClose="@OnAddDialogClose"></ModalAgregarMeta>
+}
+
+@*Seccion modales Tareas*@
+@if (EditDialogOpenTarea)
+{
+    <ModalEditarTarea MetaActual="MetaActual" ListaTareas="ListaTareas" OnClose="@OnEditDialogTareaClose"></ModalEditarTarea>
+}
+
+@if (DeleteDialogOpenTarea)
+{
+    <ModalEliminarTarea ListaTareas="ListaTareas" OnClose="@OnDeleteDialogTareaClose" OnOk="@OnDeleteDialogTareaOK"></ModalEliminarTarea>
+}
+
+@if (AddDialogTareaOpen)
+{
+    <ModalAgregarTarea MetaActual="MetaActual" ListaTareas="ListaTareas" OnClose="@OnAddDialogTareaClose"></ModalAgregarTarea>
+}
+
+
+
+@code {
+    //Variables que controlan los dialogos de metas
+    public bool EditDialogOpen { get; set; }
+    public bool DeleteDialogOpen { get; set; }
+    public bool AddDialogOpen { get; set; }
+
+    //Variables que controlan los dialogos de tareas
+    public bool EditDialogOpenTarea { get; set; }
+    public bool DeleteDialogOpenTarea { get; set; }
+    public bool AddDialogTareaOpen { get; set; }
+
+    //variables que controlan la paginación
+    private int paginaActual = 1;
+    private int paginasTotales;
+    private int registrosAMostrar = 5;
+
+    //variables que controlan los filtros
+    private string TextoFiltrar ="";
+    private DateTime FechaFiltrar = DateTime.Now;
+
+
+    List<Meta> ListaMetas;
+    List<Tarea> ListaTareas;
+    Meta MetaModificar;
+    Meta MetaActual = new Meta();
+    Tarea TareaActual = new Tarea();
+    int MetaId = 0;
+    int TotalSeleccionados = 0;
+    //bool SeleccionaTarea = false;
+    //bool SeleccionaTareaTodo = true;
+    //string ClassColor = "bg-light";
+
+
+    protected async override Task OnInitializedAsync()
+    {
+        await CargarMetas();
+        ListaTareas = new List<Tarea>();
+    }
+
+    //seccion de evenos ++********************************************************************************
+    //evento que se dispara cuando se selecciona una tarea
+    void OnChangeEventMarcado(ChangeEventArgs e)
+    {
+        var tarea = (Tarea)e.Value;
+
+        foreach(var item in ListaTareas)
+        {
+            if(item.TareaId == tarea.TareaId)
+            {
+                item.Seleccionado = tarea.Seleccionado ? false : true;
+            }
+        }
+
+        //await ListarTareas(MetaActual);
+        CuentaSeleccionados();
+    }
+
+    //Evento que marca y desmarca todas las casillas
+    void OnChangeEvent(ChangeEventArgs e)
+    {
+        if ((bool)e.Value == true)
+        {
+            foreach (var item in ListaTareas)
+            {
+                item.Seleccionado = true;
+            }
+        }
+        else
+        {
+            foreach (var item in ListaTareas)
+            {
+                item.Seleccionado = false;
+            }
+        }
+
+        CuentaSeleccionados();
+        StateHasChanged();
+    }
+
+    //Evento que se dispara al dar clic en el icono de importante
+    async Task OnClicEventImportante(ChangeEventArgs e)
+    {
+        var tarea = (Tarea)e.Value;
+
+        //Console.WriteLine($"{tarea.TareaId} - {tarea.Seleccionado}");
+
+        foreach (var item in ListaTareas)
+        {
+            if (item.TareaId == tarea.TareaId)
+            {
+                item.Importante = tarea.Importante;
+                await ActualizaTareaImportante(item);
+            }
+        }
+
+
+        //StateHasChanged();
+    }
+
+    async Task OnChangedTex(ChangeEventArgs e)
+    {
+        TextoFiltrar = (string)e.Value.ToString();       
+        await ListarTareas(MetaActual, paginaActual);
+    }
+
+    async Task OnChangedFecha(DateTime e)
+    {
+        FechaFiltrar = e;
+        await ListarTareas(MetaActual, paginaActual);
+    }
+
+    //Metodos para operar los dialos de Metas ******************************************************************
+    private async Task OnEditDialogClose(bool accepted)
+    {
+        EditDialogOpen = false;
+        await ListarTareas(MetaActual,paginaActual);
+        StateHasChanged();
+    }
+
+    private void OpenEditDialog(Meta meta)
+    {
+        MetaModificar = meta;
+        EditDialogOpen = true;
+        StateHasChanged();
+    }
+
+    private async Task OnDeleteDialogClose(bool accepted)
+    {
+        var url = $"metas/{MetaId}";
+        var response = await http.DeleteAsync(url);
+        var result = response.Content.ReadFromJsonAsync<int>();
+        if (result.Result > 0)
+        {
+            //se realizo correctamente el borrado
+            await CargarMetas();
+            StateHasChanged();
+        }
+
+        DeleteDialogOpen = false;
+    }
+
+    private void OpenDeleteDialog(int Id)
+    {
+        MetaId = Id;
+        DeleteDialogOpen = true;
+        StateHasChanged();
+    }
+
+    private async void OnAddDialogClose(bool accepted)
+    {
+        AddDialogOpen = false;
+        await CargarMetas();
+        StateHasChanged();
+        //await InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenAddDialog()
+    {
+        AddDialogOpen = true;
+        StateHasChanged();
+    }
+
+
+    //Metodos para operar los dialogos de Tareas ****************************************************
+
+    //seccion de editar
+
+    private async Task OnEditDialogTareaClose(bool accepted)
+    {
+        EditDialogOpenTarea = false;
+        await ListarTareas(MetaActual,paginaActual);
+        CuentaSeleccionados();
+        StateHasChanged();
+    }
+
+    private void OpenEditDialogTarea()
+    {
+        CuentaSeleccionados();
+
+        if (TotalSeleccionados == 1)
+        {
+            //TareaActual = MetaActual.Tareas.Where(t => t.Seleccionado == true).FirstOrDefault();
+            //MetaModificar = meta;
+            EditDialogOpenTarea = true;
+        }
+        else
+        {
+            //mensaje de error
+        }
+
+        StateHasChanged();
+    }
+
+    //seccion de eliminar
+    private void OnDeleteDialogTareaClose(bool accepted)
+    {
+        DeleteDialogOpenTarea = false;
+        StateHasChanged();
+    }
+
+    private async Task OnDeleteDialogTareaOK(bool accepted)
+    {
+        CuentaSeleccionados();
+
+        TareaActual = ListaTareas.Where(t => t.Seleccionado == true && t.MetaId == MetaActual.MetaId).FirstOrDefault();
+
+        var url = $"tareas/{TareaActual.TareaId}";
+        var response = await http.DeleteAsync(url);
+        var result = response.Content.ReadFromJsonAsync<int>();
+        if (result.Result > 0)
+        {
+            //se realizo correctamente el borrado
+            //MetaActual.Tareas.Remove(TareaActual);
+            await CargarMetas();
+            await ListarTareas(MetaActual, paginaActual);
+            CuentaSeleccionados();
+        }
+       
+        DeleteDialogOpenTarea = false;
+        StateHasChanged();
+    }
+
+    private void OpenDeleteDialogTarea()
+    {
+        DeleteDialogOpenTarea = true;
+        StateHasChanged();
+    }
+
+    //seccion de agregar
+    private async Task OnAddDialogTareaClose(bool accepted)
+    {
+        await CargarMetas();
+        await ListarTareas(MetaActual, paginaActual);       
+        AddDialogTareaOpen = false;
+        StateHasChanged();
+        //await InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenAddDialogTareas()
+    {
+        AddDialogTareaOpen = true;
+        StateHasChanged();
+    }
+
+    private async Task ActualizaTareaImportante(Tarea tarea)
+    {
+        var re = await http.PutAsJsonAsync("tareas", tarea);
+        var result = re.Content.ReadFromJsonAsync<int>();
+        if (result.Result > 0)
+        {
+            //await js.Alert("Sucursal registrada correctamente");
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CompletarTarea()
+    {
+        CuentaSeleccionados();
+
+        if (TotalSeleccionados >= 1)
+        {
+            //var completados = MetaActual.Tareas.Where(t => t.Seleccionado == true).ToList();
+            var completados = ListaTareas.Where(t => t.Seleccionado == true).ToList();
+
+            foreach (var c in completados)
+            {
+                foreach (var item in MetaActual.Tareas)
+                {
+                    if (item.TareaId == c.TareaId)
+                    {
+                        item.Estatus = true;
+                        item.Seleccionado = false;
+                    }
+                }
+            }
+
+            var re = await http.PutAsJsonAsync("metas", MetaActual);
+            var result = re.Content.ReadFromJsonAsync<int>();
+            if (result.Result > 0)
+            {
+                //await js.Alert("Sucursal registrada correctamente");
+                await InvokeAsync(StateHasChanged);
+            }
+
+            await ListarTareas(MetaActual, paginaActual);
+
+        }
+        else
+        {
+            //mensaje de error
+        }
+
+    }
+
+
+    //seccion de metodos generales ************************************************************
+    private async Task CargarMetas()
+    {
+        ListaMetas = await http.GetFromJsonAsync<List<Meta>>("metas");
+    }
+
+    private async Task ListarTareas(Meta meta,int PaginaActual = 1)
+    {   
+        MetaActual = ListaMetas.Find(m => m.MetaId == meta.MetaId);
+        await LoadTareas(MetaActual.MetaId, PaginaActual);
+        paginaActual = PaginaActual;
+        //ListaTareas = MetaActual.Tareas;
+    }
+
+    async Task LoadTareas(int MetaId, int pagina = 1, int cantidadRegistrosAMostrar = 5 )
+    {
+        var httpResponse = 
+            await http.GetAsync(
+                $"tareas?pagina={pagina}&CantidadAMostrar={cantidadRegistrosAMostrar}&"+
+                $"MetaId={MetaActual.MetaId}&TextoFiltrar={ TextoFiltrar}&"+
+                $"FechaFiltrar={FechaFiltrar.ToShortDateString()}");
+
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            paginasTotales = int.Parse(httpResponse.Headers.GetValues("totalPaginas").FirstOrDefault());
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ListaTareas = System.Text.Json.JsonSerializer.Deserialize<List<Tarea>>(responseString,
+                new System.Text.Json.JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+
+        }
+        else
+        {
+            //ShowMessage(httpResponse.StatusCode.ToString());
+        }
+    }
+
+    private async Task PaginaSeleccionada(int pagina)
+    {
+        paginaActual = pagina;
+        await LoadTareas(MetaActual.MetaId, pagina, registrosAMostrar);
+    }
+
+    Dictionary<string, object> SetAttributes()
+    {
+        var dictionary = new Dictionary<string, object>();
+        if (MetaActual.NombreMeta == null)
+        {
+            dictionary.Add("disabled", true);
+        }
+        else
+        {
+            dictionary.Add("disabled", false);
+        }
+
+        return dictionary;
+    }
+
+    private void CuentaSeleccionados()
+    {
+        TotalSeleccionados = ListaTareas.Where(t => t.Seleccionado == true).Count();
+    }
+
+}

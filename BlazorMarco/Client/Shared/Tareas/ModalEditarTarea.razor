@@ -1,0 +1,109 @@
+﻿@inject HttpClient http
+
+<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <EditForm Model="TareaActual" OnValidSubmit="ModalOk">
+                <DataAnnotationsValidator />
+                <div class="modal-header" style="background-color:#17A2B8">
+                    <h4 class="modal-title" style="color:white">Desea editar esta meta?</h4>
+                    <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control" placeholder="Tarea" @bind-value="TareaActual.NombreTarea">
+                    <ValidationMessage For="@(()=> TareaActual.NombreTarea)" />
+                    @if (TareaExiste)
+                    {
+                        <p class="text-danger">El nombre ya existe</p>
+                    }
+                    else
+                    {
+                        <p class="text-danger"></p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-outline-primary">Editar</button>
+                </div>
+
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+    [Parameter]
+    public List<Tarea> ListaTareas { get; set; }
+    [Parameter]
+    public Meta MetaActual { get; set; }
+
+    Tarea TareaActual = new Tarea();
+    bool TareaExiste = false;
+
+
+    protected override void OnParametersSet()
+    {
+        var tarea =ListaTareas.Where(t => t.Seleccionado == true).FirstOrDefault();
+        TareaActual.TareaId = tarea.TareaId;
+        TareaActual.NombreTarea = tarea.NombreTarea;
+        TareaActual.MetaId = tarea.MetaId;
+    }
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private async Task ModalOk()
+    {
+        if (ValidarNombre())
+        {
+            //mandar mensaje
+            TareaExiste = true;
+        }
+        else
+        {
+            await ModificarTarea();
+            await OnClose.InvokeAsync(true);
+        }
+
+    }
+
+    private async Task ModificarTarea()
+    {
+        //NuevaTarea = MetaActual.Tareas.Where(t => t.Seleccionado == true).FirstOrDefault();
+
+        foreach (var item in MetaActual.Tareas)
+        {
+            if (item.TareaId == TareaActual.TareaId)
+            {
+                item.NombreTarea = TareaActual.NombreTarea;
+                item.Seleccionado = false;
+            }
+        }
+
+        try
+        {
+            var re = await http.PutAsJsonAsync("metas", MetaActual);
+            var result = re.Content.ReadFromJsonAsync<int>();
+            if (result.Result > 0)
+            {
+                //await js.Alert("Sucursal registrada correctamente");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            //Mensaje de error
+        }
+
+    }
+
+    private bool ValidarNombre()
+    {
+        return ListaTareas.Where(t => t.NombreTarea == TareaActual.NombreTarea && t.MetaId == TareaActual.MetaId).Count() >= 1;
+    }
+
+}
